@@ -6,7 +6,7 @@
     <title>성역 신청 시스템</title>
     <style>
         body { font-family: 'Malgun Gothic', sans-serif; display: flex; justify-content: center; padding: 20px; background: #f0f2f5; }
-        .container { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
+        .container { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 500px; position: relative; }
         h2 { text-align: center; color: #333; margin-top: 0; }
         input, select, button { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
         button { background: #007bff; color: white; border: none; cursor: pointer; font-weight: bold; transition: 0.3s; }
@@ -14,6 +14,14 @@
         button:disabled { background: #ccc; }
         .hidden { display: none; }
         
+        /* 로딩 오버레이 */
+        #loading-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.8); border-radius: 12px;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 100; font-weight: bold; color: #007bff;
+        }
+
         /* 상단 계정 전환 바 */
         .account-switcher-bar { 
             display: flex; justify-content: space-between; align-items: center; 
@@ -34,8 +42,13 @@
 <body>
 
 <div class="container">
+    <div id="loading-overlay" class="hidden">
+        <div class="spinner"></div>
+        <p id="loading-text">전환 중...</p>
+    </div>
+
     <div id="login-section">
-        <h2>성역 신청 로그인 계정전환 1</h2>
+        <h2>성역 신청 로그인</h2>
         <input type="text" id="userId" placeholder="아이디">
         <input type="password" id="userPw" placeholder="비밀번호">
         <div style="font-size: 14px; margin-bottom: 10px;">
@@ -90,15 +103,23 @@
         if (lastUser) {
             document.getElementById("userId").value = lastUser.id;
             document.getElementById("userPw").value = lastUser.pw;
-            login();
+            login(true); // 자동 로그인은 조용히 진행
         }
     });
 
-    // 드롭다운 계정 목록 갱신 함수
+    function showLoading(text) {
+        document.getElementById("loading-text").innerText = text;
+        document.getElementById("loading-overlay").classList.remove("hidden");
+    }
+
+    function hideLoading() {
+        document.getElementById("loading-overlay").classList.add("hidden");
+    }
+
     function refreshAccountSelector() {
         const accounts = JSON.parse(localStorage.getItem("accountList") || "[]");
         const selector = document.getElementById("account-selector");
-        selector.innerHTML = ""; // 초기화
+        selector.innerHTML = ""; 
 
         accounts.forEach(acc => {
             const option = document.createElement("option");
@@ -108,17 +129,15 @@
             selector.appendChild(option);
         });
 
-        // "새 계정 추가" 옵션
         const addOption = document.createElement("option");
         addOption.value = "ADD_NEW";
         addOption.text = "+ 새 계정 추가";
         selector.appendChild(addOption);
     }
 
-    // 드롭다운 변경 시 실행되는 함수
-    function switchAccount(val) {
+    async function switchAccount(val) {
         if (val === "ADD_NEW") {
-            logout(); // 로그아웃하여 로그인 창으로 보냄
+            logout();
             return;
         }
         
@@ -126,21 +145,22 @@
         const target = accounts.find(a => a.id === val);
         
         if (target) {
+            showLoading("계정 전환 중...");
             document.getElementById("userId").value = target.id;
             document.getElementById("userPw").value = target.pw;
-            login(); // 해당 정보로 재로그인
+            
+            await login(false, true); // 스위칭 모드로 로그인 실행
         }
     }
 
-    async function login() {
+    async function login(isAuto = false, isSwitching = false) {
         const id = document.getElementById('userId').value;
         const pw = document.getElementById('userPw').value;
         const isRemember = document.getElementById('rememberMe').checked;
         const btn = document.getElementById('login-btn');
 
         if(!id || !pw) return;
-        btn.disabled = true;
-        btn.innerText = "로딩 중...";
+        if(!isSwitching) btn.disabled = true;
 
         try {
             const res = await fetch(GAS_URL, {
@@ -165,17 +185,20 @@
                 document.getElementById('main-section').classList.remove('hidden');
                 document.getElementById('welcome-msg').innerText = "⚔️ " + currentUserNick + "님 접속 중";
                 
-                refreshAccountSelector(); // 로그인 성공 시 드롭다운 갱신
+                refreshAccountSelector();
                 renderHistory(data.history);
+
+                if (isSwitching) {
+                    alert(`✅ ${currentUserNick} 계정으로 전환 완료!`);
+                }
             } else {
-                alert("아이디 또는 비밀번호가 일치하지 않습니다.");
-                localStorage.removeItem("lastLoginUser");
+                alert("로그인 실패: 정보를 확인해주세요.");
             }
         } catch (e) {
-            console.error(e);
+            alert("연결 오류가 발생했습니다.");
         } finally {
             btn.disabled = false;
-            btn.innerText = "접속하기";
+            hideLoading();
         }
     }
 
@@ -184,7 +207,6 @@
         location.reload();
     }
 
-    // --- renderHistory, submitData, deleteData는 기존 로직 유지 ---
     function renderHistory(history) {
         const tbody = document.getElementById('history-body');
         const noData = document.getElementById('no-history');
@@ -205,30 +227,36 @@
     async function submitData() {
         const relic = document.getElementById('relic-select').value;
         const btn = document.getElementById('submit-btn');
-        btn.disabled = true; btn.innerText = "전송 중...";
+        showLoading("신청 데이터 처리 중...");
         try {
             const res = await fetch(GAS_URL, {
                 method: "POST",
                 body: JSON.stringify({ type: "submit", userId: currentUserId, nick: currentUserNick, relic: relic })
             });
             const data = await res.json();
-            if (data.result === "success") { alert("신청 완료!"); login(); } // 새로고침 대신 재조회
-        } catch (e) { alert("오류"); } 
-        finally { btn.disabled = false; btn.innerText = "신청 완료"; }
+            if (data.result === "success") { 
+                alert("✅ 신청이 완료되었습니다."); 
+                login(false, false); 
+            }
+        } catch (e) { alert("오류가 발생했습니다."); } 
+        finally { hideLoading(); }
     }
 
     async function deleteData() {
         if (!confirm("정말로 신청을 취소하시겠습니까?")) return;
-        const btn = event.target;
-        btn.disabled = true;
+        showLoading("취소 요청 처리 중...");
         try {
             const res = await fetch(GAS_URL, {
                 method: "POST",
                 body: JSON.stringify({ type: "delete", nick: currentUserNick })
             });
             const data = await res.json();
-            if (data.result === "success") { alert("취소 완료"); login(); } // 새로고침 대신 재조회
-        } catch (e) { alert("오류"); }
+            if (data.result === "success") { 
+                alert("🗑️ 취소가 완료되었습니다."); 
+                login(false, false); 
+            }
+        } catch (e) { alert("오류가 발생했습니다."); }
+        finally { hideLoading(); }
     }
 </script>
 </body>
