@@ -20,7 +20,7 @@
         <h2>유적 신청 로그인</h2>
         <input type="text" id="userId" placeholder="아이디 입력">
         <input type="password" id="userPw" placeholder="비밀번호 입력">
-        <button onclick="login()">접속하기</button>
+        <button id="login-btn" onclick="login()">접속하기</button>
     </div>
 
     <div id="main-section" class="hidden">
@@ -37,28 +37,48 @@
 </div>
 
 <script>
-    // 간단 로그인 로직 (보안상 아주 민감한 정보는 다루지 마세요)
-    const VALID_USERS = { "user1": "1234", "user2": "5678" }; // 임시 ID/PW
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbyuaVNjfRWn--DpSqLbpCf8BlQekl-de0DhNlwSdQuIUsZ5rojWrRWtlLxYTduk8G373g/exec";
     let currentUserId = "";
+    let currentUserNick = ""; 
 
-    function login() {
+    async function login() {
         const id = document.getElementById('userId').value;
         const pw = document.getElementById('userPw').value;
+        const loginBtn = document.getElementById('login-btn');
 
-        if (VALID_USERS[id] && VALID_USERS[id] === pw) {
-            currentUserId = id;
-            document.getElementById('login-section').classList.add('hidden');
-            document.getElementById('main-section').classList.remove('hidden');
-            document.getElementById('welcome-msg').innerText = id + "님 환영합니다.";
-        } else {
-            alert("아이디 또는 비밀번호가 틀렸습니다.");
+        if(!id || !pw) { alert("아이디와 비밀번호를 입력하세요."); return; }
+
+        loginBtn.disabled = true;
+        loginBtn.innerText = "로그인 중...";
+
+        try {
+            // 구글 시트(GAS)에 로그인 확인 요청 전송
+            const response = await fetch(GAS_URL, {
+                method: "POST",
+                body: JSON.stringify({ type: "login", userId: id, password: pw })
+            });
+            const data = await response.json();
+
+            if (data.result === "success") {
+                currentUserId = id;
+                currentUserNick = data.nick; // 시트에서 가져온 인게임닉
+                document.getElementById('login-section').classList.add('hidden');
+                document.getElementById('main-section').classList.remove('hidden');
+                document.getElementById('welcome-msg').innerText = currentUserNick + "님 환영합니다.";
+            } else {
+                alert("아이디 또는 비밀번호가 틀렸습니다.");
+            }
+        } catch (e) {
+            alert("서버 연결에 실패했습니다.");
+        } finally {
+            loginBtn.disabled = false;
+            loginBtn.innerText = "접속하기";
         }
     }
 
     async function submitData() {
         const relic = document.getElementById('relic-select').value;
         const btn = document.getElementById('submit-btn');
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbyuaVNjfRWn--DpSqLbpCf8BlQekl-de0DhNlwSdQuIUsZ5rojWrRWtlLxYTduk8G373g/exec";
 
         if (!confirm(relic + "(으)로 신청하시겠습니까?")) return;
 
@@ -68,7 +88,12 @@
         try {
             await fetch(GAS_URL, {
                 method: "POST",
-                body: JSON.stringify({ userId: currentUserId, relic: relic })
+                body: JSON.stringify({ 
+                    type: "submit", 
+                    userId: currentUserId, 
+                    nick: currentUserNick, 
+                    relic: relic 
+                })
             });
             alert("신청이 완료되었습니다!");
         } catch (e) {
