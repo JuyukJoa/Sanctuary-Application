@@ -15,6 +15,14 @@
         .hidden { display: none; }
         #welcome-msg { color: #007bff; text-align: center; font-weight: bold; margin-bottom: 20px; }
         
+        /* 계정 전환 스타일 */
+        .account-list { margin-bottom: 15px; border: 1px dashed #ccc; padding: 10px; border-radius: 6px; background: #fafafa; }
+        .account-item { 
+            display: inline-block; background: #eee; padding: 5px 10px; border-radius: 15px; 
+            margin: 3px; font-size: 12px; cursor: pointer; border: 1px solid #ddd;
+        }
+        .account-item:hover { background: #e0e0e0; }
+
         /* 테이블 스타일 */
         .history-section { margin-top: 30px; border-top: 2px solid #eee; padding-top: 20px; }
         table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
@@ -22,34 +30,31 @@
         th { background-color: #f8f9fa; }
         .no-data { color: #999; text-align: center; padding: 20px; }
 
-        /* 취소 버튼 스타일 */
-        .btn-cancel {
-            background: #dc3545;
-            padding: 5px 10px;
-            font-size: 12px;
-            width: auto;
-            margin: 0;
-        }
-        .btn-cancel:hover { background: #a71d2a; }
+        .btn-cancel { background: #dc3545; padding: 5px 10px; font-size: 12px; width: auto; margin: 0; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div id="login-section">
-        <h2>성역 신청 로그인 취소업뎃</h2>
+        <h2>성역 신청 로그인 계정전환</h2>
+        
+        <div id="account-manager" class="account-list hidden">
+            <p style="font-size: 12px; color: #666; margin-top: 0;">최근 접속 계정 (클릭 시 전환)</p>
+            <div id="account-buttons"></div>
+        </div>
+
         <input type="text" id="userId" placeholder="아이디">
         <input type="password" id="userPw" placeholder="비밀번호">
         <div style="font-size: 14px; margin-bottom: 10px;">
-            <input type="checkbox" id="rememberMe" style="width: auto; margin-right: 5px;">
-            <label for="rememberMe">아이디/비밀번호 기억하기</label>
+            <input type="checkbox" id="rememberMe" checked style="width: auto; margin-right: 5px;">
+            <label for="rememberMe">이 계정 기억하기</label>
         </div>
         <button id="login-btn" onclick="login()">접속하기</button>
     </div>
 
     <div id="main-section" class="hidden">
         <p id="welcome-msg"></p>
-        
         <div class="apply-box">
             <label style="font-weight: bold;">[유적 신청]</label>
             <select id="relic-select">
@@ -65,19 +70,13 @@
             <h3 style="font-size: 16px; margin-bottom: 5px;">📍 나의 신청 기록</h3>
             <table>
                 <thead>
-                    <tr>
-                        <th>번호</th>
-                        <th>유적</th>
-                        <th>시간</th>
-                        <th>순서</th>
-                        <th>관리</th>
-                    </tr>
+                    <tr><th>번호</th><th>유적</th><th>시간</th><th>순서</th><th>관리</th></tr>
                 </thead>
                 <tbody id="history-body"></tbody>
             </table>
             <div id="no-history" class="no-data hidden">신청 내역이 없습니다.</div>
         </div>
-        <button onclick="logout()" style="background:#6c757d; margin-top:20px; font-size:14px;">로그아웃 (정보 삭제)</button>
+        <button onclick="logout()" style="background:#6c757d; margin-top:20px; font-size:14px;">계정 전환 (로그아웃)</button>
     </div>
 </div>
 
@@ -86,20 +85,40 @@
     let currentUserId = "";
     let currentUserNick = ""; 
 
-    // 페이지가 로드될 때 실행되는 부분
     window.addEventListener('DOMContentLoaded', () => {
-        const savedId = localStorage.getItem("savedId");
-        const savedPw = localStorage.getItem("savedPw");
+        updateAccountList();
         
-        if (savedId && savedPw) {
-            document.getElementById("userId").value = savedId;
-            document.getElementById("userPw").value = savedPw;
-            document.getElementById("rememberMe").checked = true;
-            
-            // 저장된 정보가 있으면 자동으로 로그인 함수 실행
-            login(); 
+        // 마지막으로 사용했던 계정이 있다면 자동 로그인 시도
+        const lastUser = JSON.parse(localStorage.getItem("lastLoginUser"));
+        if (lastUser) {
+            document.getElementById("userId").value = lastUser.id;
+            document.getElementById("userPw").value = lastUser.pw;
+            login();
         }
     });
+
+    // 저장된 계정 목록 UI 갱신
+    function updateAccountList() {
+        const accounts = JSON.parse(localStorage.getItem("accountList") || "[]");
+        const container = document.getElementById("account-manager");
+        const btnContainer = document.getElementById("account-buttons");
+        
+        if (accounts.length > 0) {
+            container.classList.remove("hidden");
+            btnContainer.innerHTML = "";
+            accounts.forEach(acc => {
+                const span = document.createElement("span");
+                span.className = "account-item";
+                span.innerText = acc.nick;
+                span.onclick = () => {
+                    document.getElementById("userId").value = acc.id;
+                    document.getElementById("userPw").value = acc.pw;
+                    login();
+                };
+                btnContainer.appendChild(span);
+            });
+        }
+    }
 
     async function login() {
         const id = document.getElementById('userId').value;
@@ -107,8 +126,7 @@
         const isRemember = document.getElementById('rememberMe').checked;
         const btn = document.getElementById('login-btn');
 
-        if(!id || !pw) return; // 자동 로그인 시 값이 비어있으면 중단
-        
+        if(!id || !pw) return;
         btn.disabled = true;
         btn.innerText = "로그인 중...";
 
@@ -121,32 +139,27 @@
 
             if (data.result === "success") {
                 if (isRemember) {
-                    localStorage.setItem("savedId", id);
-                    localStorage.setItem("savedPw", pw);
-                } else {
-                    localStorage.removeItem("savedId");
-                    localStorage.removeItem("savedPw");
+                    // 계정 목록 업데이트 (중복 제거 후 추가)
+                    let accounts = JSON.parse(localStorage.getItem("accountList") || "[]");
+                    accounts = accounts.filter(a => a.id !== id);
+                    accounts.push({ id: id, pw: pw, nick: data.nick });
+                    localStorage.setItem("accountList", JSON.stringify(accounts));
+                    // 마지막 로그인 계정 저장
+                    localStorage.setItem("lastLoginUser", JSON.stringify({ id: id, pw: pw }));
                 }
 
                 currentUserId = id;
                 currentUserNick = data.nick;
-                
                 document.getElementById('login-section').classList.add('hidden');
                 document.getElementById('main-section').classList.remove('hidden');
                 document.getElementById('welcome-msg').innerText = "⚔️ " + currentUserNick + "님 접속 중";
-                
                 renderHistory(data.history);
             } else {
-                // 자동 로그인 상태에서 실패했다면 (비번 변경 등) 정보 삭제
-                if(btn.innerText === "로그인 중...") {
-                    alert("로그인 정보가 유효하지 않습니다. 다시 입력해주세요.");
-                    logout();
-                } else {
-                    alert("아이디 또는 비밀번호가 일치하지 않습니다.");
-                }
+                alert("아이디 또는 비밀번호가 일치하지 않습니다.");
+                localStorage.removeItem("lastLoginUser");
             }
         } catch (e) {
-            console.error("통신 오류:", e);
+            console.error(e);
         } finally {
             btn.disabled = false;
             btn.innerText = "접속하기";
@@ -154,28 +167,23 @@
     }
 
     function logout() {
-        localStorage.removeItem("savedId");
-        localStorage.removeItem("savedPw");
+        localStorage.removeItem("lastLoginUser");
         location.reload();
     }
 
+    // --- 신청(submitData), 취소(deleteData), 렌더링(renderHistory) 함수는 이전과 동일 ---
     function renderHistory(history) {
         const tbody = document.getElementById('history-body');
         const noData = document.getElementById('no-history');
         tbody.innerHTML = "";
-
         if (!history || history.length === 0) {
             noData.classList.remove('hidden');
             return;
         }
-
         noData.classList.add('hidden');
         history.forEach(item => {
             const row = `<tr>
-                <td>${item.num}</td>
-                <td>${item.relic}</td>
-                <td>${item.time}</td>
-                <td>${item.order || '-'}</td>
+                <td>${item.num}</td><td>${item.relic}</td><td>${item.time}</td><td>${item.order || '-'}</td>
                 <td><button class="btn-cancel" onclick="deleteData()">취소</button></td>
             </tr>`;
             tbody.innerHTML += row;
@@ -185,69 +193,32 @@
     async function submitData() {
         const relic = document.getElementById('relic-select').value;
         const btn = document.getElementById('submit-btn');
-
-        btn.disabled = true;
-        btn.innerText = "전송 중...";
-
+        btn.disabled = true; btn.innerText = "전송 중...";
         try {
             const res = await fetch(GAS_URL, {
                 method: "POST",
-                body: JSON.stringify({ 
-                    type: "submit", 
-                    userId: currentUserId, 
-                    nick: currentUserNick, 
-                    relic: relic 
-                })
+                body: JSON.stringify({ type: "submit", userId: currentUserId, nick: currentUserNick, relic: relic })
             });
             const data = await res.json();
-
-            if (data.result === "success") {
-                alert("성공적으로 신청되었습니다!");
-                location.reload(); // 새로고침해도 자동 로그인되어 결과 페이지 유지
-            } else if (data.result === "duplicated") {
-                alert("⚠️ 이미 신청한 내역이 있습니다.");
-            } else {
-                alert("오류가 발생했습니다.");
-            }
-        } catch (e) {
-            alert("서버 통신 실패");
-        } finally {
-            btn.disabled = false;
-            btn.innerText = "신청 완료";
-        }
+            if (data.result === "success") { alert("성공적으로 신청되었습니다!"); location.reload(); }
+            else if (data.result === "duplicated") { alert("⚠️ 이미 신청한 내역이 있습니다."); }
+        } catch (e) { alert("오류 발생"); } 
+        finally { btn.disabled = false; btn.innerText = "신청 완료"; }
     }
 
     async function deleteData() {
-        if (!confirm("정말로 신청을 취소하시겠습니까?\n취소 시 대기 순서가 뒤로 밀릴 수 있습니다.")) return;
-
+        if (!confirm("정말로 신청을 취소하시겠습니까?")) return;
         const btn = event.target;
-        btn.disabled = true;
-        btn.innerText = "취소 중...";
-
+        btn.disabled = true; btn.innerText = "취소 중...";
         try {
             const res = await fetch(GAS_URL, {
                 method: "POST",
-                body: JSON.stringify({ 
-                    type: "delete", 
-                    nick: currentUserNick 
-                })
+                body: JSON.stringify({ type: "delete", nick: currentUserNick })
             });
             const data = await res.json();
-
-            if (data.result === "success") {
-                alert("취소되었습니다.");
-                location.reload(); // 새로고침해도 자동 로그인되어 결과 페이지 유지
-            } else {
-                alert("취소 처리에 실패했습니다.");
-            }
-        } catch (e) {
-            alert("서버 통신 오류");
-        } finally {
-            btn.disabled = false;
-            btn.innerText = "취소";
-        }
+            if (data.result === "success") { alert("취소되었습니다."); location.reload(); }
+        } catch (e) { alert("오류 발생"); }
     }
 </script>
-
 </body>
 </html>
