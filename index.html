@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>유적 신청 페이지</title>
+    <style>
+        body { font-family: sans-serif; display: flex; justify-content: center; padding: 20px; background: #f0f2f5; }
+        .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
+        input, select, button { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        button { background: #007bff; color: white; border: none; cursor: pointer; font-weight: bold; }
+        button:disabled { background: #ccc; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="login-section">
+        <h2>로그인</h2>
+        <input type="text" id="userId" placeholder="아이디 입력">
+        <input type="password" id="userPw" placeholder="비밀번호 입력">
+        <button onclick="login()">접속하기</button>
+    </div>
+
+    <div id="main-section" class="hidden">
+        <h2 id="welcome-msg"></h2>
+        <label for="relic-select">신청할 유적 선택:</label>
+        <select id="relic-select">
+            <option value="경복궁">경복궁</option>
+            <option value="불국사">불국사</option>
+            <option value="석굴암">석굴암</option>
+            <option value="첨성대">첨성대</option>
+        </select>
+        <button id="submit-btn" onclick="submitData()">신청하기</button>
+    </div>
+</div>
+
+<script>
+    // 간단 로그인 로직 (보안상 아주 민감한 정보는 다루지 마세요)
+    const VALID_USERS = { "user1": "1234", "user2": "5678" }; // 임시 ID/PW
+    let currentUserId = "";
+
+    function login() {
+        const id = document.getElementById('userId').value;
+        const pw = document.getElementById('userPw').value;
+
+        if (VALID_USERS[id] && VALID_USERS[id] === pw) {
+            currentUserId = id;
+            document.getElementById('login-section').classList.add('hidden');
+            document.getElementById('main-section').classList.remove('hidden');
+            document.getElementById('welcome-msg').innerText = id + "님 환영합니다.";
+        } else {
+            alert("아이디 또는 비밀번호가 틀렸습니다.");
+        }
+    }
+
+    async function submitData() {
+        const relic = document.getElementById('relic-select').value;
+        const btn = document.getElementById('submit-btn');
+        const GAS_URL = "여기에_구글_스크립트_배포_URL_붙여넣기";
+
+        if (!confirm(relic + "(으)로 신청하시겠습니까?")) return;
+
+        btn.disabled = true;
+        btn.innerText = "처리 중...";
+
+        try {
+            await fetch(GAS_URL, {
+                method: "POST",
+                body: JSON.stringify({ userId: currentUserId, relic: relic })
+            });
+            alert("신청이 완료되었습니다!");
+        } catch (e) {
+            alert("오류가 발생했습니다. 다시 시도해주세요.");
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "신청하기";
+        }
+    }
+</script>
+
+</body>
+</html>
