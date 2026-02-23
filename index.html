@@ -20,11 +20,17 @@
 
 <div class="container">
     <div id="login-section">
-        <h2>성역 신청 로그인</h2>
-        <input type="text" id="userId" placeholder="아이디">
-        <input type="password" id="userPw" placeholder="비밀번호">
-        <button id="login-btn" onclick="login()">접속하기</button>
+    <h2>성역 신청 로그인</h2>
+    <input type="text" id="userId" placeholder="아이디">
+    <input type="password" id="userPw" placeholder="비밀번호">
+    
+    <div style="text-align: left; font-size: 14px; margin-bottom: 10px;">
+        <input type="checkbox" id="rememberMe" style="width: auto; margin-right: 5px;">
+        <label for="rememberMe">아이디/비밀번호 기억하기</label>
     </div>
+    
+    <button id="login-btn" onclick="login()">접속하기</button>
+</div>
 
     <div id="main-section" class="hidden">
         <p id="welcome-msg"></p>
