@@ -130,7 +130,7 @@
             </table>
             <div id="no-history" class="no-data hidden" style="text-align:center; padding:20px; color:#999;">내역 없음</div>
         </div>
-        <button onclick="logout()" style="background:#6c757d; font-size:13px; margin-top:30px;">로그아웃</button>
+        <button onclick="logout()" style="background:#6c757d; font-size:13px; margin-top:30px; color:white; border:none; width:100%; padding:10px; border-radius:6px; cursor:pointer;">로그아웃</button>
     </div>
 </div>
 
@@ -147,7 +147,6 @@
             document.getElementById("userPw").value = lastUser.pw;
             login(true); 
         }
-        // 드롭다운 외부 클릭 시 닫기
         window.addEventListener('click', (e) => {
             if (!document.getElementById('account-dropdown').contains(e.target)) {
                 document.getElementById('dropdown-list').classList.add('hidden');
@@ -191,7 +190,7 @@
                 
                 renderRelicCards(data.relics);
                 renderHistory(data.history);
-                renderCustomSelector(); // 커스텀 드롭다운 갱신
+                renderCustomSelector(); 
                 
                 if(isSwitching) setTimeout(() => alert(`✅ 계정 전환 완료!`), 100);
             } else {
@@ -201,7 +200,6 @@
         } catch (e) { alert("서버 연결 실패"); } finally { setLoader(false); }
     }
 
-    // 커스텀 드롭다운 제어 로직
     function toggleDropdown() {
         document.getElementById('dropdown-list').classList.toggle('hidden');
     }
@@ -224,7 +222,6 @@
             listDiv.appendChild(item);
         });
 
-        // 추가 버튼
         const addBtn = document.createElement('div');
         addBtn.className = "dropdown-item btn-add-account";
         addBtn.innerText = "+ 새 계정 추가";
@@ -233,7 +230,7 @@
     }
 
     function removeAccount(id, event) {
-        event.stopPropagation(); // 드롭다운 클릭 이벤트 전파 방지
+        event.stopPropagation(); 
         if (!confirm("이 계정을 기억 목록에서 삭제할까요?")) return;
 
         let accounts = JSON.parse(localStorage.getItem("accountList") || "[]");
@@ -260,7 +257,6 @@
         }
     }
 
-    // 유적 카드 렌더링
     function renderRelicCards(relics) {
         const grid = document.getElementById('relic-grid');
         grid.innerHTML = "";
