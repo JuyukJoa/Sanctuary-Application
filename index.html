@@ -3,17 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>성역 신청 시스템 11</title>
+    <title>성역 신청 시스템</title>
     <style>
         body { font-family: 'Malgun Gothic', sans-serif; display: flex; justify-content: center; padding: 20px; background: #f0f2f5; }
-        .container { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
-        h2 { text-align: center; color: #333; }
+        .container { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
+        h2 { text-align: center; color: #333; margin-top: 0; }
         input, select, button { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
         button { background: #007bff; color: white; border: none; cursor: pointer; font-weight: bold; transition: 0.3s; }
         button:hover { background: #0056b3; }
         button:disabled { background: #ccc; }
         .hidden { display: none; }
-        #welcome-msg { color: #007bff; text-align: center; font-weight: bold; }
+        #welcome-msg { color: #007bff; text-align: center; font-weight: bold; margin-bottom: 20px; }
+        
+        /* 테이블 스타일 */
+        .history-section { margin-top: 30px; border-top: 2px solid #eee; padding-top: 20px; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+        th { background-color: #f8f9fa; }
+        .no-data { color: #999; text-align: center; padding: 20px; }
     </style>
 </head>
 <body>
@@ -23,26 +30,43 @@
         <h2>성역 신청 로그인</h2>
         <input type="text" id="userId" placeholder="아이디">
         <input type="password" id="userPw" placeholder="비밀번호">
-        
-        <div style="text-align: left; font-size: 14px; margin-bottom: 10px;">
+        <div style="font-size: 14px; margin-bottom: 10px;">
             <input type="checkbox" id="rememberMe" style="width: auto; margin-right: 5px;">
             <label for="rememberMe">아이디/비밀번호 기억하기</label>
         </div>
-        
         <button id="login-btn" onclick="login()">접속하기</button>
     </div>
 
     <div id="main-section" class="hidden">
         <p id="welcome-msg"></p>
-        <hr>
-        <label>신청할 유적 종류:</label>
-        <select id="relic-select">
-            <option value="경복궁">경복궁</option>
-            <option value="불국사">불국사</option>
-            <option value="석굴암">석굴암</option>
-            <option value="첨성대">첨성대</option>
-        </select>
-        <button id="submit-btn" onclick="submitData()">신청 완료</button>
+        
+        <div class="apply-box">
+            <label style="font-weight: bold;">[유적 신청]</label>
+            <select id="relic-select">
+                <option value="경복궁">경복궁</option>
+                <option value="불국사">불국사</option>
+                <option value="석굴암">석굴암</option>
+                <option value="첨성대">첨성대</option>
+            </select>
+            <button id="submit-btn" onclick="submitData()">신청 완료</button>
+        </div>
+
+        <div class="history-section">
+            <h3 style="font-size: 16px; margin-bottom: 5px;">📍 나의 신청 기록</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>번호</th>
+                        <th>유적</th>
+                        <th>시간</th>
+                        <th>순서</th>
+                    </tr>
+                </thead>
+                <tbody id="history-body">
+                    </tbody>
+            </table>
+            <div id="no-history" class="no-data hidden">신청 내역이 없습니다.</div>
+        </div>
     </div>
 </div>
 
@@ -51,7 +75,6 @@
     let currentUserId = "";
     let currentUserNick = ""; 
 
-    // [추가] 페이지 로드 시 저장된 정보 불러오기
     window.addEventListener('DOMContentLoaded', () => {
         const savedId = localStorage.getItem("savedId");
         const savedPw = localStorage.getItem("savedPw");
@@ -70,7 +93,7 @@
 
         if(!id || !pw) return alert("정보를 입력하세요.");
         btn.disabled = true;
-        btn.innerText = "확인 중...";
+        btn.innerText = "로그인 중...";
 
         try {
             const res = await fetch(GAS_URL, {
@@ -80,7 +103,6 @@
             const data = await res.json();
 
             if (data.result === "success") {
-                // [추가] 로그인 성공 시 기억하기 체크 여부에 따라 브라우저 저장
                 if (isRemember) {
                     localStorage.setItem("savedId", id);
                     localStorage.setItem("savedPw", pw);
@@ -91,9 +113,13 @@
 
                 currentUserId = id;
                 currentUserNick = data.nick;
+                
                 document.getElementById('login-section').classList.add('hidden');
                 document.getElementById('main-section').classList.remove('hidden');
                 document.getElementById('welcome-msg').innerText = "⚔️ " + currentUserNick + "님 접속 중";
+                
+                // 내 기록 렌더링
+                renderHistory(data.history);
             } else {
                 alert("아이디 또는 비밀번호가 일치하지 않습니다.");
             }
@@ -105,12 +131,34 @@
         }
     }
 
+    function renderHistory(history) {
+        const tbody = document.getElementById('history-body');
+        const noData = document.getElementById('no-history');
+        tbody.innerHTML = "";
+
+        if (!history || history.length === 0) {
+            noData.classList.remove('hidden');
+            return;
+        }
+
+        noData.classList.add('hidden');
+        history.forEach(item => {
+            const row = `<tr>
+                <td>${item.num}</td>
+                <td>${item.relic}</td>
+                <td>${item.time}</td>
+                <td>${item.order || '-'}</td>
+            </tr>`;
+            tbody.innerHTML += row;
+        });
+    }
+
     async function submitData() {
         const relic = document.getElementById('relic-select').value;
         const btn = document.getElementById('submit-btn');
 
         btn.disabled = true;
-        btn.innerText = "처리 중...";
+        btn.innerText = "전송 중...";
 
         try {
             const res = await fetch(GAS_URL, {
@@ -126,13 +174,15 @@
 
             if (data.result === "success") {
                 alert("성공적으로 신청되었습니다!");
+                // 방금 신청한 내역을 표에 즉시 추가 (새로고침 없이)
+                renderHistory([data.newEntry]); 
             } else if (data.result === "duplicated") {
                 alert("⚠️ 이미 신청한 내역이 있습니다.");
             } else {
-                alert("신청 중 오류가 발생했습니다.");
+                alert("오류가 발생했습니다.");
             }
         } catch (e) {
-            alert("서버와 통신할 수 없습니다.");
+            alert("서버 통신 실패");
         } finally {
             btn.disabled = false;
             btn.innerText = "신청 완료";
