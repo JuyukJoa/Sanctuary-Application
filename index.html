@@ -5,18 +5,36 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>유적 신청 페이지</title>
     <style>
-        body { font-family: 'Malgun Gothic', sans-serif; display: flex; justify-content: center; padding: 20px; background: #f0f2f5; }
+        body { font-family: 'Pretendard', 'Malgun Gothic', sans-serif; display: flex; justify-content: center; padding: 20px; background: #f0f2f5; }
         .container { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 550px; position: relative; min-height: 450px; }
         h2 { text-align: center; color: #333; margin-top: 0; }
         input, button { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
         
-        /* 로그인 섹션 스타일 수정 */
+        /* --- 모던한 비밀번호 토글 스타일 --- */
         .password-container { position: relative; width: 100%; }
-        .password-container input { padding-right: 45px; } /* 눈 아이콘 공간 확보 */
+        .password-container input { padding-right: 45px; }
         .toggle-password {
-            position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
-            cursor: pointer; color: #888; font-size: 18px; user-select: none;
+            position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+            cursor: pointer; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
         }
+        /* CSS 눈 아이콘 */
+        .eye-icon {
+            position: relative; width: 18px; height: 12px; border: 2px solid #999;
+            border-radius: 70% 10%; transform: rotate(45deg); transition: all 0.2s;
+        }
+        .eye-icon::before {
+            content: ''; position: absolute; width: 6px; height: 6px; background: #999;
+            border-radius: 50%; left: 50%; top: 50%; transform: translate(-50%, -50%);
+        }
+        /* 비밀번호가 보일 때 (슬래시 제거) */
+        .visible .eye-icon { border-color: #007bff; }
+        .visible .eye-icon::before { background: #007bff; }
+        /* 비밀번호가 가려질 때 (슬래시 추가) */
+        .hidden-pw .eye-slash {
+            position: absolute; width: 2px; height: 22px; background: #999;
+            transform: rotate(90deg); transition: all 0.2s;
+        }
+        /* ---------------------------------- */
 
         .relic-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 15px 0; }
         .relic-card {
@@ -101,9 +119,12 @@
     <div id="login-section">
         <h2>유적 신청 로그인</h2>
         <input type="text" id="userId" placeholder="아이디">
-        <div class="password-container">
+        <div class="password-container hidden-pw" id="pw-box">
             <input type="password" id="userPw" placeholder="비밀번호">
-            <span class="toggle-password" onclick="togglePwView()">👁️</span>
+            <div class="toggle-password" onclick="togglePwView()">
+                <div class="eye-icon"></div>
+                <div class="eye-slash"></div>
+            </div>
         </div>
         <button id="login-btn" onclick="login()">접속하기</button>
     </div>
@@ -165,19 +186,23 @@
         });
     });
 
-    // 비밀번호 보기/숨기기 토글
+    // --- 비밀번호 보기 토글 (모던 UI 제어) ---
     function togglePwView() {
         const pwInput = document.getElementById("userPw");
-        const toggleBtn = document.querySelector(".toggle-password");
+        const pwBox = document.getElementById("pw-box");
+        
         if (pwInput.type === "password") {
             pwInput.type = "text";
-            toggleBtn.innerText = "👁️‍🗨️";
+            pwBox.classList.remove("hidden-pw");
+            pwBox.classList.add("visible");
         } else {
             pwInput.type = "password";
-            toggleBtn.innerText = "👁️";
+            pwBox.classList.remove("visible");
+            pwBox.classList.add("hidden-pw");
         }
     }
 
+    // 이하 기존 기능 함수들 (setLoader, login, renderRelicCards 등) 동일하게 유지
     function setLoader(show, text = "처리 중...") {
         const overlay = document.getElementById("loading-overlay");
         document.getElementById("loading-text").innerText = text;
