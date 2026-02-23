@@ -222,22 +222,32 @@
     }
 
     // --- 유적 카드 렌더링 (C열 시간값 반영) ---
-    function renderRelicCards(relics) {
+function renderRelicCards(relics) {
         const grid = document.getElementById('relic-grid');
         grid.innerHTML = "";
         selectedRelic = ""; 
+        
         relics.forEach(relic => {
             const card = document.createElement('div');
             card.className = 'relic-card';
+            
+            // 메인 인원이 3명 이상이면 붉은색 테두리
             if (parseInt(relic.main || 0) >= 3) card.classList.add('full');
             
-            // relic.time(C열 데이터)이 존재하면 표시, 없으면 공백
+            // 1. 상태값이 있으면 (상태) 추가, 없으면 이름만
+            const statusSuffix = relic.status ? ` (${relic.status})` : "";
+            const displayName = relic.name + statusSuffix;
+
+            // 2. 시간값 (C열)
             const timeDisplay = relic.time ? relic.time : "&nbsp;";
 
             card.innerHTML = `
-                <div class="relic-name">${relic.name}</div>
+                <div class="relic-name">${displayName}</div>
                 <div class="relic-status">${timeDisplay}</div>
-                <div class="relic-count">👥 ${relic.count}<br>(<span class="txt-main">${relic.main}</span> / <span class="txt-sub">${relic.sub}</span>)</div>
+                <div class="relic-count">
+                    👥 ${relic.count}<br>
+                    (<span class="txt-main">${relic.main}</span> / <span class="txt-sub">${relic.sub}</span>)
+                </div>
             `;
             
             card.onclick = () => {
@@ -246,7 +256,9 @@
                     card.classList.add('active');
                     selectedRelic = relic.name;
                     card.dataset.mainCount = relic.main;
-                } else { selectedRelic = ""; }
+                } else { 
+                    selectedRelic = ""; 
+                }
             };
             grid.appendChild(card);
         });
