@@ -10,12 +10,7 @@
         h2 { text-align: center; color: #333; margin-top: 0; }
         input, button { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
         
-        .relic-grid { 
-            display: grid; 
-            grid-template-columns: repeat(4, 1fr); 
-            gap: 8px; 
-            margin: 15px 0; 
-        }
+        .relic-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 15px 0; }
         .relic-card {
             background: #fff; border: 2px solid #eee; border-radius: 8px; padding: 10px 2px;
             text-align: center; cursor: pointer; transition: all 0.2s ease;
@@ -38,7 +33,6 @@
             background: #f8f9fa; border-left: 4px solid #007bff; padding: 10px;
             margin: 15px 0 5px 0; font-size: 12px; color: #555; line-height: 1.6;
         }
-        .apply-help-text strong { color: #007bff; }
 
         button#submit-btn, button#login-btn { background: #007bff; color: white; border: none; cursor: pointer; font-weight: bold; margin-top: 10px; }
         
@@ -46,13 +40,31 @@
         #loading-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.85); border-radius: 12px; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; font-weight: bold; color: #007bff; }
         .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #007bff; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 15px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
-        /* 계정 전환 바 레이아웃 수정 */
+
+        /* 커스텀 드롭다운 스타일 */
+        .custom-dropdown { position: relative; width: 200px; user-select: none; }
+        .dropdown-selected { 
+            background: #fff; border: 1px solid #ddd; padding: 8px 12px; border-radius: 6px; 
+            font-size: 14px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+        }
+        .dropdown-list { 
+            position: absolute; top: 100%; left: 0; width: 100%; background: #fff; border: 1px solid #ddd; 
+            border-radius: 6px; margin-top: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); z-index: 1000; overflow: hidden;
+        }
+        .dropdown-item { 
+            display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; 
+            font-size: 14px; cursor: pointer; transition: background 0.2s;
+        }
+        .dropdown-item:hover { background: #f0f7ff; }
+        .dropdown-item.active { background: #e7f1ff; font-weight: bold; color: #007bff; }
+        .btn-del-mini { 
+            color: #ccc; font-weight: bold; font-size: 16px; width: 20px; height: 20px; 
+            display: flex; align-items: center; justify-content: center; border-radius: 4px;
+        }
+        .btn-del-mini:hover { color: #dc3545; background: #ffebeb; }
+        .btn-add-account { border-top: 1px solid #eee; color: #007bff; font-weight: bold; justify-content: center; }
+
         .account-switcher-bar { display: flex; justify-content: space-between; align-items: center; background: #e9ecef; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #dee2e6; }
-        .switcher-left { display: flex; align-items: center; gap: 8px; }
-        #account-selector { width: auto; padding: 6px; font-size: 14px; }
-        .btn-del-account { width: auto; margin: 0; padding: 4px 8px; font-size: 11px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; }
-        
         #welcome-msg { color: #007bff; text-align: center; font-weight: bold; margin: 15px 0; font-size: 18px; }
         
         table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; }
@@ -87,11 +99,11 @@
 
     <div id="main-section" class="hidden">
         <div class="account-switcher-bar">
-            <div class="switcher-left">
-                <span style="font-size:13px; font-weight:bold;">계정 전환 🔄</span>
-                <select id="account-selector" onchange="handleAccountChange(this.value)"></select>
+            <span style="font-size:13px; font-weight:bold;">계정 전환 🔄</span>
+            <div class="custom-dropdown" id="account-dropdown">
+                <div class="dropdown-selected" onclick="toggleDropdown()">선택 중... ▾</div>
+                <div class="dropdown-list hidden" id="dropdown-list"></div>
             </div>
-            <button class="btn-del-account" onclick="removeAccountFromList()">목록 삭제</button>
         </div>
         
         <p id="welcome-msg"></p>
@@ -102,8 +114,7 @@
             
             <div class="apply-help-text">
                 💡 해당 유적을 선택 후 신청완료를 누르세요.<br>
-                (<strong>메인(앞 순번)</strong> 신청이 없는 경우 <strong>메인</strong> 나머지는 <strong>추가 신청</strong>입니다.)<br>
-                유적 하나 당 최대 15인 참가 가능합니다.
+                (<strong>메인(앞 순번)</strong> 신청이 없는 경우 <strong>메인</strong> 나머지는 <strong>추가 신청</strong>입니다.)
             </div>
 
             <button id="submit-btn" onclick="submitData()">신청 완료</button>
@@ -113,13 +124,7 @@
             <h3 style="font-size: 15px; margin-bottom: 5px;">📍 나의 신청 기록</h3>
             <table>
                 <thead>
-                    <tr>
-                        <th>유적</th>
-                        <th>시간</th>
-                        <th>순번</th>
-                        <th>종류</th>
-                        <th>관리</th>
-                    </tr>
+                    <tr><th>유적</th><th>시간</th><th>순번</th><th>종류</th><th>관리</th></tr>
                 </thead>
                 <tbody id="history-body"></tbody>
             </table>
@@ -142,6 +147,12 @@
             document.getElementById("userPw").value = lastUser.pw;
             login(true); 
         }
+        // 드롭다운 외부 클릭 시 닫기
+        window.addEventListener('click', (e) => {
+            if (!document.getElementById('account-dropdown').contains(e.target)) {
+                document.getElementById('dropdown-list').classList.add('hidden');
+            }
+        });
     });
 
     function setLoader(show, text = "처리 중...") {
@@ -179,8 +190,8 @@
                 document.getElementById('welcome-msg').innerText = "⚔️ " + data.nick;
                 
                 renderRelicCards(data.relics);
-                renderSelector();
                 renderHistory(data.history);
+                renderCustomSelector(); // 커스텀 드롭다운 갱신
                 
                 if(isSwitching) setTimeout(() => alert(`✅ 계정 전환 완료!`), 100);
             } else {
@@ -190,78 +201,107 @@
         } catch (e) { alert("서버 연결 실패"); } finally { setLoader(false); }
     }
 
+    // 커스텀 드롭다운 제어 로직
+    function toggleDropdown() {
+        document.getElementById('dropdown-list').classList.toggle('hidden');
+    }
+
+    function renderCustomSelector() {
+        const accounts = JSON.parse(localStorage.getItem("accountList") || "[]");
+        const listDiv = document.getElementById("dropdown-list");
+        const selectedDiv = document.querySelector(".dropdown-selected");
+
+        selectedDiv.innerText = currentUserNick + " ▾";
+        listDiv.innerHTML = "";
+
+        accounts.forEach(acc => {
+            const item = document.createElement('div');
+            item.className = `dropdown-item ${acc.id === currentUserId ? 'active' : ''}`;
+            item.innerHTML = `
+                <span onclick="handleAccountChange('${acc.id}')" style="flex:1">${acc.nick}</span>
+                <span class="btn-del-mini" onclick="removeAccount('${acc.id}', event)">×</span>
+            `;
+            listDiv.appendChild(item);
+        });
+
+        // 추가 버튼
+        const addBtn = document.createElement('div');
+        addBtn.className = "dropdown-item btn-add-account";
+        addBtn.innerText = "+ 새 계정 추가";
+        addBtn.onclick = logout;
+        listDiv.appendChild(addBtn);
+    }
+
+    function removeAccount(id, event) {
+        event.stopPropagation(); // 드롭다운 클릭 이벤트 전파 방지
+        if (!confirm("이 계정을 기억 목록에서 삭제할까요?")) return;
+
+        let accounts = JSON.parse(localStorage.getItem("accountList") || "[]");
+        accounts = accounts.filter(acc => acc.id !== id);
+        localStorage.setItem("accountList", JSON.stringify(accounts));
+
+        if (id === currentUserId) {
+            localStorage.removeItem("lastLoginUser");
+            location.reload();
+        } else {
+            renderCustomSelector();
+        }
+    }
+
+    async function handleAccountChange(id) {
+        if (id === currentUserId) return;
+        const accounts = JSON.parse(localStorage.getItem("accountList") || "[]");
+        const target = accounts.find(a => a.id === id);
+        if(target) {
+            document.getElementById("userId").value = target.id;
+            document.getElementById("userPw").value = target.pw;
+            document.getElementById('dropdown-list').classList.add('hidden');
+            await login(false, true);
+        }
+    }
+
+    // 유적 카드 렌더링
     function renderRelicCards(relics) {
         const grid = document.getElementById('relic-grid');
         grid.innerHTML = "";
         selectedRelic = ""; 
-
         relics.forEach(relic => {
             const card = document.createElement('div');
             card.className = 'relic-card';
-            
-            const mCount = parseInt(relic.main || 0);
-            if (mCount >= 3) card.classList.add('full');
-
+            if (parseInt(relic.main || 0) >= 3) card.classList.add('full');
             card.innerHTML = `
                 <div class="relic-name">${relic.name}</div>
                 <div class="relic-status">${relic.status || '&nbsp;'}</div>
-                <div class="relic-count">
-                    👥 ${relic.count}<br>
-                    (<span class="txt-main">${relic.main}</span> / <span class="txt-sub">${relic.sub}</span>)
-                </div>
+                <div class="relic-count">👥 ${relic.count}<br>(<span class="txt-main">${relic.main}</span> / <span class="txt-sub">${relic.sub}</span>)</div>
             `;
-
             card.onclick = () => {
-                const isActive = card.classList.contains('active');
                 document.querySelectorAll('.relic-card').forEach(c => c.classList.remove('active'));
-
-                if (!isActive) {
+                if (selectedRelic !== (relic.status ? `${relic.name} (${relic.status})` : relic.name)) {
                     card.classList.add('active');
-                    // 내부적으로 전송할 때는 selectedRelic을 상태값 포함 명칭으로 일단 저장
                     selectedRelic = relic.status ? `${relic.name} (${relic.status})` : relic.name;
                     card.dataset.mainCount = relic.main;
-                } else {
-                    selectedRelic = ""; 
-                }
+                } else { selectedRelic = ""; }
             };
             grid.appendChild(card);
         });
     }
 
     async function submitData() {
-        if (!selectedRelic) {
-            alert("신청할 유적을 먼저 클릭해 주세요!");
-            return;
-        }
-
-        // [수정] 전송 전 유적 이름에서 상태값(괄호) 제거
+        if (!selectedRelic) { alert("유적을 먼저 클릭해 주세요!"); return; }
         const pureRelicName = selectedRelic.split(' (')[0].trim();
-
         const historyRows = document.getElementById('history-body').children;
-        const isNextApplyMain = historyRows.length === 0;
-        const activeCard = document.querySelector('.relic-card.active');
-        const targetMainCount = parseInt(activeCard.dataset.mainCount || 0);
-
-        if (isNextApplyMain && targetMainCount >= 3) {
-            alert("⚠️ 해당 유적은 메인 신청 인원이 모두 채워져 신청이 불가능합니다.");
-            return;
+        const isNextApplyMain = Array.from(historyRows).every(row => row.querySelector('.badge-type').innerText !== "메인");
+        
+        if (isNextApplyMain && parseInt(document.querySelector('.relic-card.active').dataset.mainCount) >= 3) {
+            alert("⚠️ 해당 유적은 메인 신청 인원이 가득 찼습니다."); return;
         }
         
         setLoader(true, "신청 중...");
         try {
-            const res = await fetch(GAS_URL, {
-                method: "POST",
-                body: JSON.stringify({ type: "submit", nick: currentUserNick, relic: pureRelicName })
-            });
+            const res = await fetch(GAS_URL, { method: "POST", body: JSON.stringify({ type: "submit", nick: currentUserNick, relic: pureRelicName }) });
             const data = await res.json();
-            
-            if (data.result === "success") {
-                alert("✅ 신청 완료!");
-                selectedRelic = "";
-                await login(true); 
-            } else {
-                alert("⚠️ " + (data.message || "신청에 실패했습니다."));
-            }
+            if (data.result === "success") { alert("✅ 신청 완료!"); selectedRelic = ""; await login(true); }
+            else { alert("⚠️ " + data.message); }
         } catch (e) { alert("통신 에러"); } finally { setLoader(false); }
     }
 
@@ -269,90 +309,28 @@
         const tbody = document.getElementById('history-body');
         const noData = document.getElementById('no-history');
         tbody.innerHTML = "";
-        
-        if (!history || history.length === 0) {
-            noData.classList.remove('hidden');
-            return;
-        }
-        
+        if (!history || history.length === 0) { noData.classList.remove('hidden'); return; }
         noData.classList.add('hidden');
         history.forEach(item => {
             const typeClass = item.type === "메인" ? "bg-main" : "bg-sub";
-            tbody.innerHTML += `
-                <tr>
-                    <td style="font-weight:bold;">${item.relic}</td>
-                    <td style="font-size:10px; color:#666;">${item.time.split(' ')[1]}</td>
-                    <td>${item.order}번</td>
-                    <td><span class="badge-type ${typeClass}">${item.type}</span></td>
-                    <td><button class="btn-cancel" onclick="deleteData('${item.relic}')">취소</button></td>
-                </tr>`;
+            tbody.innerHTML += `<tr>
+                <td style="font-weight:bold;">${item.relic}</td>
+                <td style="font-size:10px; color:#666;">${item.time.split(' ')[1]}</td>
+                <td>${item.order}번</td>
+                <td><span class="badge-type ${typeClass}">${item.type}</span></td>
+                <td><button class="btn-cancel" onclick="deleteData('${item.relic}')">취소</button></td>
+            </tr>`;
         });
     }
 
     async function deleteData(relicName) {
-        // [수정] 취소 시에도 유적 이름에서 상태값(괄호) 제거
         const pureRelicName = relicName.split(' (')[0].trim();
-
-        if(!confirm(`[${pureRelicName}] 신청을 취소하시겠습니까?`)) return;
-        setLoader(true, "취소 처리 중...");
+        if(!confirm(`[${pureRelicName}] 취소하시겠습니까?`)) return;
+        setLoader(true, "처리 중...");
         try {
-            const res = await fetch(GAS_URL, { 
-                method: "POST", 
-                body: JSON.stringify({ type: "delete", nick: currentUserNick, relic: pureRelicName }) 
-            });
-            const data = await res.json();
-            if (data.result === "success") {
-                alert("취소되었습니다.");
-                await login(true);
-            }
-        } catch (e) { alert("에러 발생"); } finally { setLoader(false); }
-    }
-
-    function renderSelector() {
-        const accounts = JSON.parse(localStorage.getItem("accountList") || "[]");
-        const selector = document.getElementById("account-selector");
-        if (accounts.length === 0) {
-            selector.innerHTML = `<option value="NEW">계정 추가하기</option>`;
-        } else {
-            selector.innerHTML = accounts.map(acc => `<option value="${acc.id}" ${acc.id === currentUserId ? 'selected' : ''}>${acc.nick}</option>`).join('') + `<option value="NEW">+ 추가</option>`;
-        }
-    }
-
-    async function handleAccountChange(val) {
-        if(val === "NEW") return logout();
-        const accounts = JSON.parse(localStorage.getItem("accountList") || "[]");
-        const target = accounts.find(a => a.id === val);
-        if(target) {
-            document.getElementById("userId").value = target.id;
-            document.getElementById("userPw").value = target.pw;
-            await login(false, true);
-        }
-    }
-
-    // [신규] 계정 목록 삭제 함수
-    function removeAccountFromList() {
-        const selector = document.getElementById("account-selector");
-        const targetId = selector.value;
-
-        if (targetId === "NEW") {
-            alert("삭제할 계정을 먼저 선택해 주세요.");
-            return;
-        }
-
-        if (!confirm(`브라우저 목록에서 [${currentUserNick}] 계정을 제거할까요?\n(실제 계정 데이터는 삭제되지 않습니다.)`)) return;
-
-        let accounts = JSON.parse(localStorage.getItem("accountList") || "[]");
-        accounts = accounts.filter(acc => acc.id !== targetId);
-        localStorage.setItem("accountList", JSON.stringify(accounts));
-
-        if (targetId === currentUserId) {
-            localStorage.removeItem("lastLoginUser");
-            alert("목록에서 제거되었습니다. 다시 로그인해 주세요.");
-            location.reload();
-        } else {
-            alert("목록에서 제거되었습니다.");
-            renderSelector();
-        }
+            const res = await fetch(GAS_URL, { method: "POST", body: JSON.stringify({ type: "delete", nick: currentUserNick, relic: pureRelicName }) });
+            if ((await res.json()).result === "success") { alert("취소되었습니다."); await login(true); }
+        } catch (e) { alert("에러"); } finally { setLoader(false); }
     }
 
     function logout() { localStorage.removeItem("lastLoginUser"); location.reload(); }
