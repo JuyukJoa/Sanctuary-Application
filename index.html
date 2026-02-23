@@ -14,7 +14,6 @@
         button:disabled { background: #ccc; cursor: not-allowed; }
         .hidden { display: none !important; }
         
-        /* 로딩 오버레이 (무한 로딩 방지용 레이어) */
         #loading-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(255, 255, 255, 0.85); border-radius: 12px;
@@ -24,7 +23,6 @@
         .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #007bff; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 15px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* 전환바 스타일 */
         .account-switcher-bar { display: flex; justify-content: space-between; align-items: center; background: #e9ecef; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #dee2e6; }
         .switcher-label { font-size: 13px; font-weight: bold; color: #495057; }
         #account-selector { width: auto; padding: 6px; margin: 0; font-size: 14px; border-radius: 4px; }
@@ -66,10 +64,7 @@
         <div class="apply-box">
             <label style="font-weight: bold; font-size: 14px;">[유적 선택]</label>
             <select id="relic-select">
-                <option value="경복궁">경복궁</option>
-                <option value="불국사">불국사</option>
-                <option value="석굴암">석굴암</option>
-                <option value="첨성대">첨성대</option>
+                <option>목록 로딩 중...</option>
             </select>
             <button id="submit-btn" onclick="submitData()">신청 완료</button>
         </div>
@@ -90,13 +85,12 @@
     let currentUserId = "";
     let currentUserNick = ""; 
 
-    // 초기 로드
     window.addEventListener('load', () => {
         const lastUser = JSON.parse(localStorage.getItem("lastLoginUser"));
         if (lastUser) {
             document.getElementById("userId").value = lastUser.id;
             document.getElementById("userPw").value = lastUser.pw;
-            login(true); // 자동 로그인은 로딩창 없이 조용히 실행
+            login(true); 
         }
     });
 
@@ -117,13 +111,12 @@
         try {
             const response = await fetch(GAS_URL, {
                 method: "POST",
-                mode: "cors", // CORS 명시
+                mode: "cors",
                 body: JSON.stringify({ type: "login", userId: id, password: pw })
             });
             const data = await response.json();
 
             if (data.result === "success") {
-                // 계정 정보 로컬 저장
                 let accounts = JSON.parse(localStorage.getItem("accountList") || "[]");
                 accounts = accounts.filter(a => a.id !== id);
                 accounts.push({ id, pw, nick: data.nick });
@@ -133,13 +126,15 @@
                 currentUserId = id;
                 currentUserNick = data.nick;
 
-                // UI 전환
                 document.getElementById('login-section').classList.add('hidden');
                 document.getElementById('main-section').classList.remove('hidden');
                 document.getElementById('welcome-msg').innerText = "⚔️ " + data.nick + "님 접속 중";
                 
+                // [수정 포인트] 유적 드롭다운 갱신
+                renderRelicSelect(data.relics);
                 renderSelector();
                 renderHistory(data.history);
+                
                 if(isSwitching) setTimeout(() => alert(`✅ ${data.nick} 계정으로 전환 완료!`), 100);
             } else {
                 alert("인증 실패: 아이디나 비밀번호를 확인하세요.");
@@ -150,6 +145,25 @@
             alert("서버 연결 실패. 네트워크를 확인하세요.");
         } finally {
             setLoader(false);
+        }
+    }
+
+    // [신규 함수] 서버에서 받은 리스트로 유적 드롭다운 생성
+    function renderRelicSelect(relics) {
+        const relicSelect = document.getElementById('relic-select');
+        relicSelect.innerHTML = ""; // 초기화
+
+        if (relics && relics.length > 0) {
+            relics.forEach(relicName => {
+                const option = document.createElement('option');
+                option.value = relicName;
+                option.textContent = relicName;
+                relicSelect.appendChild(option);
+            });
+        } else {
+            const option = document.createElement('option');
+            option.textContent = "사용 가능한 유적 없음";
+            relicSelect.appendChild(option);
         }
     }
 
@@ -192,6 +206,8 @@
 
     async function submitData() {
         const relic = document.getElementById('relic-select').value;
+        if(!relic || relic === "사용 가능한 유적 없음") return alert("유적을 선택해주세요.");
+        
         setLoader(true, "신청서 제출 중...");
         try {
             const res = await fetch(GAS_URL, {
@@ -201,7 +217,7 @@
             const data = await res.json();
             if (data.result === "success") {
                 alert("신청이 완료되었습니다.");
-                await login(true); // 조용히 갱신
+                await login(true); 
             } else {
                 alert("신청 실패: " + (data.result === "duplicated" ? "이미 신청함" : "오류"));
             }
