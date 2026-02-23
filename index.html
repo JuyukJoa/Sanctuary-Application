@@ -32,21 +32,22 @@
             transform: rotate(90deg); transition: all 0.2s;
         }
 
+        /* 유적 그리드 및 카드 디자인 */
         .relic-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 15px 0; }
         .relic-card {
             background: #fff; border: 2px solid #eee; border-radius: 8px; padding: 10px 2px;
             text-align: center; cursor: pointer; transition: all 0.2s ease;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            min-height: 95px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); word-break: keep-all;
+            min-height: 105px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); word-break: keep-all;
         }
         .relic-card:hover { border-color: #007bff; background: #f8fbff; }
         .relic-card.full { border-color: #dc3545; background: #fff5f5; }
         .relic-card.full .relic-name { color: #dc3545; }
         .relic-card.active { border-color: #007bff; background: #e7f1ff; box-shadow: inset 0 2px 4px rgba(0,123,255,0.2); transform: translateY(2px); }
-        .relic-card.active.full { border-color: #007bff; background: #e7f1ff; }
         .relic-card.active .relic-name { color: #007bff; font-weight: bold; }
-        .relic-card .relic-name { font-size: 13px; color: #444; margin-bottom: 2px; font-weight: bold; }
-        .relic-card .relic-status { font-size: 10px; color: #888; margin-bottom: 4px; }
+        
+        .relic-name { font-size: 13px; color: #444; margin-bottom: 2px; font-weight: bold; }
+        .relic-status { font-size: 11px; color: #007bff; margin-bottom: 4px; font-weight: 500; } /* 시간값 표시 스타일 */
         .relic-count { font-size: 11px; color: #555; font-weight: normal; margin-top: 2px; line-height: 1.3; }
         .txt-main { color: #28a745; font-weight: bold; }
         .txt-sub { color: #007bff; font-weight: bold; }
@@ -59,7 +60,7 @@
         button#submit-btn, button#login-btn { background: #007bff; color: white; border: none; cursor: pointer; font-weight: bold; margin-top: 10px; }
         
         .hidden { display: none !important; }
-        #loading-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.9); border-radius: 12px; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; font-weight: bold; color: #007bff; }
+        #loading-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.92); border-radius: 12px; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; font-weight: bold; color: #007bff; }
         .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #007bff; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 15px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
@@ -186,7 +187,7 @@
         const id = document.getElementById('userId').value;
         const pw = document.getElementById('userPw').value;
         if(!id || !pw) return;
-        if(!isAuto) setLoader(true, "로그인 중...");
+        if(!isAuto) setLoader(true, "로그인 정보 확인 중...");
 
         try {
             const response = await fetch(GAS_URL, {
@@ -220,6 +221,37 @@
         } catch (e) { alert("서버 연결 실패"); } finally { setLoader(false); }
     }
 
+    // --- 유적 카드 렌더링 (C열 시간값 반영) ---
+    function renderRelicCards(relics) {
+        const grid = document.getElementById('relic-grid');
+        grid.innerHTML = "";
+        selectedRelic = ""; 
+        relics.forEach(relic => {
+            const card = document.createElement('div');
+            card.className = 'relic-card';
+            if (parseInt(relic.main || 0) >= 3) card.classList.add('full');
+            
+            // relic.time(C열 데이터)이 존재하면 표시, 없으면 공백
+            const timeDisplay = relic.time ? relic.time : "&nbsp;";
+
+            card.innerHTML = `
+                <div class="relic-name">${relic.name}</div>
+                <div class="relic-status">${timeDisplay}</div>
+                <div class="relic-count">👥 ${relic.count}<br>(<span class="txt-main">${relic.main}</span> / <span class="txt-sub">${relic.sub}</span>)</div>
+            `;
+            
+            card.onclick = () => {
+                document.querySelectorAll('.relic-card').forEach(c => c.classList.remove('active'));
+                if (selectedRelic !== relic.name) {
+                    card.classList.add('active');
+                    selectedRelic = relic.name;
+                    card.dataset.mainCount = relic.main;
+                } else { selectedRelic = ""; }
+            };
+            grid.appendChild(card);
+        });
+    }
+
     async function submitData() {
         if (!selectedRelic) { alert("유적을 먼저 클릭해 주세요!"); return; }
         const pureRelicName = selectedRelic.split(' (')[0].trim();
@@ -230,20 +262,15 @@
             alert("⚠️ 해당 유적은 메인 신청 인원이 가득 찼습니다."); return;
         }
         
-        // 1. 로더 시작
         setLoader(true, "신청 데이터 기록 중...");
-        
         try {
             const res = await fetch(GAS_URL, { method: "POST", body: JSON.stringify({ type: "submit", nick: currentUserNick, relic: pureRelicName }) });
             const data = await res.json();
             
             if (data.result === "success") {
                 selectedRelic = "";
-                // 2. 신청 후 최신 데이터로 화면 갱신을 먼저 수행 (await 사용)
                 await login(true); 
-                // 3. 로더를 끄고
                 setLoader(false);
-                // 4. 아주 약간의 지연 후 성공 메시지 띄움 (브라우저 렌더링 보장)
                 setTimeout(() => alert("✅ 신청 완료!"), 150);
             } else {
                 setLoader(false);
@@ -251,7 +278,7 @@
             }
         } catch (e) { 
             setLoader(false);
-            alert("통신 에러가 발생했습니다."); 
+            alert("통신 에러"); 
         }
     }
 
@@ -264,12 +291,12 @@
             const res = await fetch(GAS_URL, { method: "POST", body: JSON.stringify({ type: "delete", nick: currentUserNick, relic: pureRelicName }) });
             const data = await res.json();
             if (data.result === "success") {
-                await login(true); // 최신화 완료까지 대기
+                await login(true); 
                 setLoader(false);
-                setTimeout(() => alert("✅ 정상적으로 취소되었습니다."), 150);
+                setTimeout(() => alert("✅ 취소되었습니다."), 150);
             } else {
                 setLoader(false);
-                alert("⚠️ 취소 실패: " + data.message);
+                alert("⚠️ 실패: " + data.message);
             }
         } catch (e) { 
             setLoader(false);
@@ -277,7 +304,7 @@
         }
     }
 
-    // --- 기타 렌더링 함수 (기존과 동일) ---
+    // --- 유틸리티 함수들 ---
     function toggleDropdown() { document.getElementById('dropdown-list').classList.toggle('hidden'); }
     function renderCustomSelector() {
         const accounts = JSON.parse(localStorage.getItem("accountList") || "[]");
@@ -315,26 +342,6 @@
             document.getElementById('dropdown-list').classList.add('hidden');
             await login(false, true);
         }
-    }
-    function renderRelicCards(relics) {
-        const grid = document.getElementById('relic-grid');
-        grid.innerHTML = "";
-        selectedRelic = ""; 
-        relics.forEach(relic => {
-            const card = document.createElement('div');
-            card.className = 'relic-card';
-            if (parseInt(relic.main || 0) >= 3) card.classList.add('full');
-            card.innerHTML = `<div class="relic-name">${relic.name}</div><div class="relic-status">${relic.status || '&nbsp;'}</div><div class="relic-count">👥 ${relic.count}<br>(<span class="txt-main">${relic.main}</span> / <span class="txt-sub">${relic.sub}</span>)</div>`;
-            card.onclick = () => {
-                document.querySelectorAll('.relic-card').forEach(c => c.classList.remove('active'));
-                if (selectedRelic !== (relic.status ? `${relic.name} (${relic.status})` : relic.name)) {
-                    card.classList.add('active');
-                    selectedRelic = relic.status ? `${relic.name} (${relic.status})` : relic.name;
-                    card.dataset.mainCount = relic.main;
-                } else { selectedRelic = ""; }
-            };
-            grid.appendChild(card);
-        });
     }
     function renderHistory(history) {
         const tbody = document.getElementById('history-body');
