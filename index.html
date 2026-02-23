@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>성역 신청 시스템 11 </title>
+    <title>성역 신청 시스템 11</title>
     <style>
         body { font-family: 'Malgun Gothic', sans-serif; display: flex; justify-content: center; padding: 20px; background: #f0f2f5; }
         .container { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
@@ -20,17 +20,17 @@
 
 <div class="container">
     <div id="login-section">
-    <h2>성역 신청 로그인 2</h2>
-    <input type="text" id="userId" placeholder="아이디">
-    <input type="password" id="userPw" placeholder="비밀번호">
-    
-    <div style="text-align: left; font-size: 14px; margin-bottom: 10px;">
-        <input type="checkbox" id="rememberMe" style="width: auto; margin-right: 5px;">
-        <label for="rememberMe">아이디/비밀번호 기억하기</label>
+        <h2>성역 신청 로그인 2</h2>
+        <input type="text" id="userId" placeholder="아이디">
+        <input type="password" id="userPw" placeholder="비밀번호">
+        
+        <div style="text-align: left; font-size: 14px; margin-bottom: 10px;">
+            <input type="checkbox" id="rememberMe" style="width: auto; margin-right: 5px;">
+            <label for="rememberMe">아이디/비밀번호 기억하기</label>
+        </div>
+        
+        <button id="login-btn" onclick="login()">접속하기</button>
     </div>
-    
-    <button id="login-btn" onclick="login()">접속하기</button>
-</div>
 
     <div id="main-section" class="hidden">
         <p id="welcome-msg"></p>
@@ -51,9 +51,21 @@
     let currentUserId = "";
     let currentUserNick = ""; 
 
+    // [추가] 페이지 로드 시 저장된 정보 불러오기
+    window.addEventListener('DOMContentLoaded', () => {
+        const savedId = localStorage.getItem("savedId");
+        const savedPw = localStorage.getItem("savedPw");
+        if (savedId && savedPw) {
+            document.getElementById("userId").value = savedId;
+            document.getElementById("userPw").value = savedPw;
+            document.getElementById("rememberMe").checked = true;
+        }
+    });
+
     async function login() {
         const id = document.getElementById('userId').value;
         const pw = document.getElementById('userPw').value;
+        const isRemember = document.getElementById('rememberMe').checked;
         const btn = document.getElementById('login-btn');
 
         if(!id || !pw) return alert("정보를 입력하세요.");
@@ -68,6 +80,15 @@
             const data = await res.json();
 
             if (data.result === "success") {
+                // [추가] 로그인 성공 시 기억하기 체크 여부에 따라 브라우저 저장
+                if (isRemember) {
+                    localStorage.setItem("savedId", id);
+                    localStorage.setItem("savedPw", pw);
+                } else {
+                    localStorage.removeItem("savedId");
+                    localStorage.removeItem("savedPw");
+                }
+
                 currentUserId = id;
                 currentUserNick = data.nick;
                 document.getElementById('login-section').classList.add('hidden');
@@ -84,41 +105,39 @@
         }
     }
 
-async function submitData() {
-    const relic = document.getElementById('relic-select').value;
-    const btn = document.getElementById('submit-btn');
+    async function submitData() {
+        const relic = document.getElementById('relic-select').value;
+        const btn = document.getElementById('submit-btn');
 
-    // [수정] confirm(...) 절차를 삭제했습니다.
-    
-    btn.disabled = true;
-    btn.innerText = "처리 중...";
+        btn.disabled = true;
+        btn.innerText = "처리 중...";
 
-    try {
-        const res = await fetch(GAS_URL, {
-            method: "POST",
-            body: JSON.stringify({ 
-                type: "submit", 
-                userId: currentUserId, 
-                nick: currentUserNick, 
-                relic: relic 
-            })
-        });
-        const data = await res.json();
+        try {
+            const res = await fetch(GAS_URL, {
+                method: "POST",
+                body: JSON.stringify({ 
+                    type: "submit", 
+                    userId: currentUserId, 
+                    nick: currentUserNick, 
+                    relic: relic 
+                })
+            });
+            const data = await res.json();
 
-        if (data.result === "success") {
-            alert("성공적으로 신청되었습니다!");
-        } else if (data.result === "duplicated") {
-            alert("⚠️ 이미 신청한 내역이 있습니다.");
-        } else {
-            alert("신청 중 오류가 발생했습니다.");
+            if (data.result === "success") {
+                alert("성공적으로 신청되었습니다!");
+            } else if (data.result === "duplicated") {
+                alert("⚠️ 이미 신청한 내역이 있습니다.");
+            } else {
+                alert("신청 중 오류가 발생했습니다.");
+            }
+        } catch (e) {
+            alert("서버와 통신할 수 없습니다.");
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "신청 완료";
         }
-    } catch (e) {
-        alert("서버와 통신할 수 없습니다.");
-    } finally {
-        btn.disabled = false;
-        btn.innerText = "신청 완료";
     }
-}
 </script>
 
 </body>
