@@ -10,7 +10,6 @@
         h2 { text-align: center; color: #333; margin-top: 0; }
         input, button { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
         
-        /* 유적 버튼 그리드 시스템: 한 줄에 4개 배치 */
         .relic-grid { 
             display: grid; 
             grid-template-columns: repeat(4, 1fr); 
@@ -29,27 +28,35 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-height: 95px; /* 수치 표시를 위해 높이 약간 추가 */
+            min-height: 95px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
             word-break: keep-all;
         }
         .relic-card:hover { border-color: #007bff; background: #f8fbff; }
         
-        /* 토글 활성화 상태 */
+        /* [추가] 메인 3명 이상일 때 스타일 */
+        .relic-card.full {
+            border-color: #dc3545;
+            background: #fff5f5;
+        }
+        .relic-card.full .relic-name { color: #dc3545; }
+
         .relic-card.active {
             border-color: #007bff;
             background: #e7f1ff;
             box-shadow: inset 0 2px 4px rgba(0,123,255,0.2);
             transform: translateY(2px);
         }
+        /* active 상태가 full보다 우선순위 높게 설정 (선택 시 파란색 유지) */
+        .relic-card.active.full { border-color: #007bff; background: #e7f1ff; }
+
         .relic-card.active .relic-name { color: #007bff; font-weight: bold; }
         .relic-card .relic-name { font-size: 13px; color: #444; margin-bottom: 2px; font-weight: bold; }
         .relic-card .relic-status { font-size: 10px; color: #888; margin-bottom: 4px; }
         
-        /* 수치 텍스트 스타일 */
         .relic-count { font-size: 11px; color: #555; font-weight: normal; margin-top: 2px; line-height: 1.3; }
-        .txt-main { color: #28a745; font-weight: bold; } /* 메인: 초록색 */
-        .txt-sub { color: #007bff; font-weight: bold; }  /* 추가: 파란색 */
+        .txt-main { color: #28a745; font-weight: bold; }
+        .txt-sub { color: #007bff; font-weight: bold; }
 
         button#submit-btn { background: #007bff; color: white; border: none; cursor: pointer; font-weight: bold; margin-top: 20px; }
         
@@ -67,6 +74,7 @@
         th { background: #f8f9fa; }
         .btn-cancel { background: #dc3545; padding: 4px 8px; font-size: 11px; width: auto; margin: 0; border: none; color: white; border-radius: 4px; cursor: pointer; }
         .badge-type { display: inline-block; padding: 2px 5px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-top: 2px; }
+        /* [수정] 메인-초록, 추가-파랑 일치 */
         .bg-main { background: #eafaf1; color: #28a745; border: 1px solid #28a745; }
         .bg-sub { background: #e7f1ff; color: #007bff; border: 1px solid #007bff; }
 
@@ -196,7 +204,10 @@
             const card = document.createElement('div');
             card.className = 'relic-card';
             
-            // 수치 표시 형식: 👥 신청숫자 (메인/추가) 색상 구분 적용
+            // [추가] 메인 인원이 3명 이상이면 full 클래스 적용
+            const mCount = parseInt(relic.main || 0);
+            if (mCount >= 3) card.classList.add('full');
+
             card.innerHTML = `
                 <div class="relic-name">${relic.name}</div>
                 <div class="relic-status">${relic.status || '&nbsp;'}</div>
@@ -213,6 +224,8 @@
                 if (!isActive) {
                     card.classList.add('active');
                     selectedRelic = relic.status ? `${relic.name} (${relic.status})` : relic.name;
+                    // 클릭 시 현재 카드의 메인 인원수를 임시 저장
+                    card.dataset.mainCount = relic.main;
                 } else {
                     selectedRelic = ""; 
                 }
@@ -225,6 +238,17 @@
         if (!selectedRelic) {
             alert("신청할 유적을 먼저 클릭해 주세요!");
             return;
+        }
+
+        // [추가] 메인 신청 차단 로직
+        const historyRows = document.getElementById('history-body').children;
+        const isNextApplyMain = historyRows.length === 0; // 내역이 없으면 이번 신청은 '메인'임
+        const activeCard = document.querySelector('.relic-card.active');
+        const targetMainCount = parseInt(activeCard.dataset.mainCount || 0);
+
+        if (isNextApplyMain && targetMainCount >= 3) {
+            alert("⚠️ 해당 유적은 메인 신청 인원이 모두 채워져 신청이 불가능합니다.");
+            return; // 서버 전송 중단
         }
         
         setLoader(true, "신청 중...");
