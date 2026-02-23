@@ -10,6 +10,14 @@
         h2 { text-align: center; color: #333; margin-top: 0; }
         input, button { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
         
+        /* 로그인 섹션 스타일 수정 */
+        .password-container { position: relative; width: 100%; }
+        .password-container input { padding-right: 45px; } /* 눈 아이콘 공간 확보 */
+        .toggle-password {
+            position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+            cursor: pointer; color: #888; font-size: 18px; user-select: none;
+        }
+
         .relic-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 15px 0; }
         .relic-card {
             background: #fff; border: 2px solid #eee; border-radius: 8px; padding: 10px 2px;
@@ -93,7 +101,10 @@
     <div id="login-section">
         <h2>유적 신청 로그인</h2>
         <input type="text" id="userId" placeholder="아이디">
-        <input type="password" id="userPw" placeholder="비밀번호">
+        <div class="password-container">
+            <input type="password" id="userPw" placeholder="비밀번호">
+            <span class="toggle-password" onclick="togglePwView()">👁️</span>
+        </div>
         <button id="login-btn" onclick="login()">접속하기</button>
     </div>
 
@@ -153,6 +164,19 @@
             }
         });
     });
+
+    // 비밀번호 보기/숨기기 토글
+    function togglePwView() {
+        const pwInput = document.getElementById("userPw");
+        const toggleBtn = document.querySelector(".toggle-password");
+        if (pwInput.type === "password") {
+            pwInput.type = "text";
+            toggleBtn.innerText = "👁️‍🗨️";
+        } else {
+            pwInput.type = "password";
+            toggleBtn.innerText = "👁️";
+        }
+    }
 
     function setLoader(show, text = "처리 중...") {
         const overlay = document.getElementById("loading-overlay");
