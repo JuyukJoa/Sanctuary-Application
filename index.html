@@ -8,32 +8,57 @@
         body { font-family: 'Malgun Gothic', sans-serif; display: flex; justify-content: center; padding: 20px; background: #f0f2f5; }
         .container { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 500px; position: relative; min-height: 450px; }
         h2 { text-align: center; color: #333; margin-top: 0; }
-        input, select, button { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
-        button { background: #007bff; color: white; border: none; cursor: pointer; font-weight: bold; transition: 0.3s; }
-        button:hover { background: #0056b3; }
-        button:disabled { background: #ccc; cursor: not-allowed; }
-        .hidden { display: none !important; }
+        input, button { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
         
-        #loading-overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255, 255, 255, 0.85); border-radius: 12px;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            z-index: 9999; font-weight: bold; color: #007bff;
+        /* 유적 버튼 그리드 시스템 */
+        .relic-grid { 
+            display: grid; 
+            grid-template-columns: repeat(2, 1fr); 
+            gap: 12px; 
+            margin: 15px 0; 
         }
+        .relic-card {
+            background: #fff;
+            border: 2px solid #eee;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 80px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .relic-card:hover { border-color: #007bff; background: #f8fbff; }
+        
+        /* 토글 활성화 상태 (눌림) */
+        .relic-card.active {
+            border-color: #007bff;
+            background: #e7f1ff;
+            box-shadow: inset 0 2px 4px rgba(0,123,255,0.2);
+            transform: translateY(2px);
+        }
+        .relic-card.active .relic-name { color: #007bff; font-weight: bold; }
+        .relic-card .relic-name { font-size: 15px; color: #444; margin-bottom: 4px; }
+        .relic-card .relic-status { font-size: 12px; color: #888; }
+
+        button#submit-btn { background: #007bff; color: white; border: none; cursor: pointer; font-weight: bold; margin-top: 20px; }
+        button#submit-btn:disabled { background: #ccc; cursor: not-allowed; }
+        
+        /* 기존 스타일 유지 */
+        .hidden { display: none !important; }
+        #loading-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.85); border-radius: 12px; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; font-weight: bold; color: #007bff; }
         .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #007bff; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 15px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
         .account-switcher-bar { display: flex; justify-content: space-between; align-items: center; background: #e9ecef; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #dee2e6; }
-        .switcher-label { font-size: 13px; font-weight: bold; color: #495057; }
-        #account-selector { width: auto; padding: 6px; margin: 0; font-size: 14px; border-radius: 4px; }
-        
+        #account-selector { width: auto; padding: 6px; font-size: 14px; }
         #welcome-msg { color: #007bff; text-align: center; font-weight: bold; margin: 15px 0; font-size: 18px; }
-        .history-section { margin-top: 25px; border-top: 2px solid #eee; padding-top: 20px; }
-        table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; background: #fff; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
         th, td { border: 1px solid #ddd; padding: 10px; text-align: center; }
-        th { background-color: #f8f9fa; font-weight: bold; }
-        .no-data { color: #999; text-align: center; padding: 25px; background: #fafafa; border-radius: 6px; margin-top: 10px; }
-        .btn-cancel { background: #dc3545; padding: 6px 12px; font-size: 12px; width: auto; margin: 0; }
+        .btn-cancel { background: #dc3545; padding: 6px 12px; font-size: 11px; width: auto; margin: 0; border: none; color: white; border-radius: 4px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -45,45 +70,43 @@
     </div>
 
     <div id="login-section">
-        <h2>성역 신청 로그인</h2>
+        <h2>성역 신청 로그인 신청 수정</h2>
         <input type="text" id="userId" placeholder="아이디">
         <input type="password" id="userPw" placeholder="비밀번호">
-        <div style="font-size: 14px; margin-bottom: 10px; display: flex; align-items: center;">
-            <input type="checkbox" id="rememberMe" checked style="width: 18px; height: 18px; margin-right: 8px;">
-            <label for="rememberMe">이 계정 기억하기</label>
-        </div>
         <button id="login-btn" onclick="login()">접속하기</button>
     </div>
 
     <div id="main-section" class="hidden">
         <div class="account-switcher-bar">
-            <span class="switcher-label">계정 전환 🔄</span>
+            <span style="font-size:13px; font-weight:bold;">계정 전환 🔄</span>
             <select id="account-selector" onchange="handleAccountChange(this.value)"></select>
         </div>
+        
         <p id="welcome-msg"></p>
+
         <div class="apply-box">
-            <label style="font-weight: bold; font-size: 14px;">[유적 선택]</label>
-            <select id="relic-select">
-                <option>목록 로딩 중...</option>
-            </select>
-            <button id="submit-btn" onclick="submitData()">신청 완료</button>
+            <label style="font-weight: bold; font-size: 14px;">[유적 선택 (토글)]</label>
+            <div id="relic-grid" class="relic-grid"></div>
+            <button id="submit-btn" onclick="submitData()">선청 완료</button>
         </div>
+
         <div class="history-section">
-            <h3 style="font-size: 16px; margin: 0 0 10px 0;">📍 나의 신청 기록</h3>
+            <h3 style="font-size: 15px;">📍 나의 신청 기록</h3>
             <table>
                 <thead><tr><th>번호</th><th>유적</th><th>시간</th><th>순서</th><th>관리</th></tr></thead>
                 <tbody id="history-body"></tbody>
             </table>
-            <div id="no-history" class="no-data hidden">최근 신청 내역이 없습니다.</div>
+            <div id="no-history" class="no-data hidden" style="text-align:center; padding:20px; color:#999;">내역 없음</div>
         </div>
-        <button onclick="logout()" style="background:#6c757d; margin-top:30px; font-size:14px;">새 계정 추가 (로그아웃)</button>
+        <button onclick="logout()" style="background:#6c757d; font-size:13px;">로그아웃</button>
     </div>
 </div>
 
 <script>
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbyuaVNjfRWn--DpSqLbpCf8BlQekl-de0DhNlwSdQuIUsZ5rojWrRWtlLxYTduk8G373g/exec";
+    const GAS_URL = "본인의_GAS_배포_URL"; 
     let currentUserId = "";
     let currentUserNick = ""; 
+    let selectedRelic = ""; // 현재 선택된 유적명을 담는 변수
 
     window.addEventListener('load', () => {
         const lastUser = JSON.parse(localStorage.getItem("lastLoginUser"));
@@ -105,147 +128,106 @@
         const id = document.getElementById('userId').value;
         const pw = document.getElementById('userPw').value;
         if(!id || !pw) return;
-
-        if(!isAuto) setLoader(true, isSwitching ? "계정 전환 중..." : "접속 중...");
+        if(!isAuto) setLoader(true);
 
         try {
             const response = await fetch(GAS_URL, {
                 method: "POST",
-                mode: "cors",
                 body: JSON.stringify({ type: "login", userId: id, password: pw })
             });
             const data = await response.json();
 
             if (data.result === "success") {
+                currentUserId = id;
+                currentUserNick = data.nick;
+
+                // 로컬 스토리지 계정 관리
                 let accounts = JSON.parse(localStorage.getItem("accountList") || "[]");
                 accounts = accounts.filter(a => a.id !== id);
                 accounts.push({ id, pw, nick: data.nick });
                 localStorage.setItem("accountList", JSON.stringify(accounts));
                 localStorage.setItem("lastLoginUser", JSON.stringify({ id, pw }));
 
-                currentUserId = id;
-                currentUserNick = data.nick;
-
                 document.getElementById('login-section').classList.add('hidden');
                 document.getElementById('main-section').classList.remove('hidden');
-                document.getElementById('welcome-msg').innerText = "⚔️ " + data.nick + "님 접속 중";
+                document.getElementById('welcome-msg').innerText = "⚔️ " + data.nick;
                 
-                // [수정 포인트] 유적 드롭다운 갱신
-                renderRelicSelect(data.relics);
+                // 유적 버튼 생성 및 초기화
+                renderRelicCards(data.relics);
                 renderSelector();
                 renderHistory(data.history);
                 
-                if(isSwitching) setTimeout(() => alert(`✅ ${data.nick} 계정으로 전환 완료!`), 100);
+                if(isSwitching) setTimeout(() => alert(`✅ 계정 전환 완료!`), 100);
             } else {
-                alert("인증 실패: 아이디나 비밀번호를 확인하세요.");
+                alert("로그인 실패");
                 if(isAuto) logout();
             }
-        } catch (e) {
-            console.error(e);
-            alert("서버 연결 실패. 네트워크를 확인하세요.");
-        } finally {
-            setLoader(false);
-        }
+        } catch (e) { alert("서버 연결 실패"); } finally { setLoader(false); }
     }
 
-    // [신규 함수] 서버에서 받은 리스트로 유적 드롭다운 생성
-    function renderRelicSelect(relics) {
-        const relicSelect = document.getElementById('relic-select');
-        relicSelect.innerHTML = ""; // 초기화
+    // [중요] 유적 카드 버튼 생성 함수
+    function renderRelicCards(relics) {
+        const grid = document.getElementById('relic-grid');
+        grid.innerHTML = "";
+        selectedRelic = ""; // 선택 초기화
 
-        if (relics && relics.length > 0) {
-            relics.forEach(relicName => {
-                const option = document.createElement('option');
-                option.value = relicName;
-                option.textContent = relicName;
-                relicSelect.appendChild(option);
-            });
-        } else {
-            const option = document.createElement('option');
-            option.textContent = "사용 가능한 유적 없음";
-            relicSelect.appendChild(option);
-        }
-    }
-
-    function renderSelector() {
-        const accounts = JSON.parse(localStorage.getItem("accountList") || "[]");
-        const selector = document.getElementById("account-selector");
-        selector.innerHTML = accounts.map(acc => 
-            `<option value="${acc.id}" ${acc.id === currentUserId ? 'selected' : ''}>${acc.nick}</option>`
-        ).join('') + `<option value="NEW">+ 새 계정 추가</option>`;
-    }
-
-    async function handleAccountChange(val) {
-        if(val === "NEW") return logout();
-        const accounts = JSON.parse(localStorage.getItem("accountList") || "[]");
-        const target = accounts.find(a => a.id === val);
-        if(target) {
-            document.getElementById("userId").value = target.id;
-            document.getElementById("userPw").value = target.pw;
-            await login(false, true);
-        }
-    }
-
-    function renderHistory(history) {
-        const tbody = document.getElementById('history-body');
-        const noData = document.getElementById('no-history');
-        tbody.innerHTML = "";
-        
-        if (!history || history.length === 0) {
-            noData.classList.remove('hidden');
+        if (!relics || relics.length === 0) {
+            grid.innerHTML = "<p>유적 데이터가 없습니다.</p>";
             return;
         }
-        noData.classList.add('hidden');
-        history.forEach(item => {
-            tbody.innerHTML += `<tr>
-                <td>${item.num}</td><td>${item.relic}</td><td>${item.time}</td><td>${item.order || '-'}</td>
-                <td><button class="btn-cancel" onclick="deleteData()">취소</button></td>
-            </tr>`;
+
+        relics.forEach(relicFullName => {
+            const card = document.createElement('div');
+            card.className = 'relic-card';
+            
+            // 이름과 상태 분리 표시 (선택 사항)
+            const namePart = relicFullName.split(' (')[0];
+            const statusPart = relicFullName.includes('(') ? '(' + relicFullName.split(' (')[1] : "";
+
+            card.innerHTML = `
+                <div class="relic-name">${namePart}</div>
+                <div class="relic-status">${statusPart}</div>
+            `;
+
+            // 토글 클릭 이벤트
+            card.onclick = () => {
+                const isActive = card.classList.contains('active');
+                
+                // 모든 카드 활성상태 해제 (단일 선택 토글 방식)
+                document.querySelectorAll('.relic-card').forEach(c => c.classList.remove('active'));
+
+                if (!isActive) {
+                    card.classList.add('active');
+                    selectedRelic = relicFullName;
+                } else {
+                    selectedRelic = ""; // 다시 누르면 선택 해제
+                }
+            };
+
+            grid.appendChild(card);
         });
     }
 
     async function submitData() {
-        const relic = document.getElementById('relic-select').value;
-        if(!relic || relic === "사용 가능한 유적 없음") return alert("유적을 선택해주세요.");
+        if (!selectedRelic) {
+            alert("신청할 유적을 먼저 클릭해 주세요!");
+            return;
+        }
         
-        setLoader(true, "신청서 제출 중...");
+        setLoader(true, "신청 중...");
         try {
             const res = await fetch(GAS_URL, {
                 method: "POST",
-                body: JSON.stringify({ type: "submit", userId: currentUserId, nick: currentUserNick, relic: relic })
+                body: JSON.stringify({ type: "submit", userId: currentUserId, nick: currentUserNick, relic: selectedRelic })
             });
             const data = await res.json();
             if (data.result === "success") {
-                alert("신청이 완료되었습니다.");
+                alert("✅ 신청 완료!");
                 await login(true); 
             } else {
-                alert("신청 실패: " + (data.result === "duplicated" ? "이미 신청함" : "오류"));
+                alert("실패: " + (data.result === "duplicated" ? "이미 신청함" : "오류"));
             }
-        } catch (e) { alert("통신 에러 발생"); }
-        finally { setLoader(false); }
+        } catch (e) { alert("통신 에러"); } finally { setLoader(false); }
     }
 
-    async function deleteData() {
-        if(!confirm("신청을 취소하시겠습니까?")) return;
-        setLoader(true, "취소 처리 중...");
-        try {
-            const res = await fetch(GAS_URL, {
-                method: "POST",
-                body: JSON.stringify({ type: "delete", nick: currentUserNick })
-            });
-            const data = await res.json();
-            if (data.result === "success") {
-                alert("취소되었습니다.");
-                await login(true);
-            }
-        } catch (e) { alert("통신 에러 발생"); }
-        finally { setLoader(false); }
-    }
-
-    function logout() {
-        localStorage.removeItem("lastLoginUser");
-        location.reload();
-    }
-</script>
-</body>
-</html>
+    // 나머지 함수들 (render
